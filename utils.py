@@ -9,24 +9,6 @@ from colorama import Fore, Style
 
 load_dotenv()
 
-# Function to simulate a continual chat
-def continual_chat(rag_chain):
-    print(Fore.MAGENTA + "Start chatting with the AI! Type 'exit' to end the conversation." + Style.RESET_ALL)
-    chat_history = []  # Collect chat history here (a sequence of messages)
-    while True:
-        query = input(Fore.CYAN + "You: " + Style.RESET_ALL)
-        query = query.encode("utf-8").decode("utf-8")
-
-        if query.lower() == "exit":
-            break
-        # Process the user's query through the retrieval chain
-        result = rag_chain.invoke({"input": query, "chat_history": chat_history})
-        # Display the AI's response
-        print(Fore.MAGENTA + f"AI: {result['answer']}" + Style.RESET_ALL)
-        # Update the chat history
-        chat_history.append(HumanMessage(content=query))
-        chat_history.append(AIMessage(content=result["answer"].encode("utf-8").decode("utf-8")))
-
 def create_vector_store(docs, store_name, embeddings, db_dir):
     persistent_directory = os.path.join(db_dir, store_name)
     if not os.path.exists(persistent_directory):
@@ -37,7 +19,7 @@ def create_vector_store(docs, store_name, embeddings, db_dir):
     else:
         print(Fore.CYAN + f"Vector store {store_name} already exists." + Style.RESET_ALL)
 
-def query_vector_store(store_name, query, db_dir, embeddings, search_type="mmr", search_kwargs={"k": 3, "fetch_k": 20, "lambda_mult": 0.5}):
+def query_vector_store(store_name, query, db_dir, embeddings, search_type="mmr", search_kwargs={"k": 15, "fetch_k": 50, "lambda_mult": 0.5}):
     persistent_directory = os.path.join(db_dir, store_name)
 
     if not os.path.exists(persistent_directory):
@@ -58,7 +40,7 @@ def query_vector_store(store_name, query, db_dir, embeddings, search_type="mmr",
             print(Fore.CYAN + f"Source: {doc.metadata.get('source', 'Unknown')}\n" + Style.RESET_ALL)
     return relevant_docs
 
-def get_retriever(store_name, db_dir, embeddings, search_type="mmr", search_kwargs={"k": 3, "fetch_k": 20, "lambda_mult": 0.5}):
+def get_retriever(store_name, db_dir, embeddings, search_type="mmr", search_kwargs={"k": 15, "fetch_k": 50, "lambda_mult": 0.5}):
     persistent_directory = os.path.join(db_dir, store_name)
 
     if not os.path.exists(persistent_directory):
