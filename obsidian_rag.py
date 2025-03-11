@@ -66,7 +66,7 @@ create_vector_store(documents, "chroma_db_with_metadata", embedder, db_dir)
 
 # Geçmiş bazlı sorgu genişletme için prompt
 contextualize_q_prompt = ChatPromptTemplate.from_messages([
-    ("system", "Given a chat history and the latest user question, reformulate it as a standalone question."),
+    ("system", "Considering the entire conversation history and the relevant notes, rephrase the latest user query into a clear, standalone question that fully captures its intent and necessary context."),
     MessagesPlaceholder("chat_history"),
     ("human", "{input}"),
 ])
@@ -77,11 +77,10 @@ retriever = get_retriever("chroma_db_with_metadata", db_dir, embedder, search_ty
 history_aware_retriever = create_history_aware_retriever(llm, retriever, contextualize_q_prompt)
 
 qa_system_prompt = (
-    "You are an assistant for question-answering tasks. Use "
-    "the following pieces of retrieved context to answer the "
-    "question. If you don't know the answer, just say that you "
-    "don't know. Keep the answer concise."
-    "\n\n"
+    "You are an expert assistant specialized in extracting and synthesizing detailed and comprehensive information from provided notes and conversation history. "
+    "Utilize the following retrieved context from the user's notes to answer the question thoroughly, offering detailed explanations, elaborations, and any additional relevant information. "
+    "If the answer is not present in the notes or you are uncertain, explicitly state that the answer cannot be determined from the provided information. "
+    "Provide as much information as necessary to fully address the question, and do not hold back on details even for general or life-lesson type queries.\n\n"
     "Context: {context}"
 )
 
@@ -95,7 +94,7 @@ qa_prompt = ChatPromptTemplate.from_messages([
 
 # Alternatif sorgu üretme promptu
 query_expansion_prompt = ChatPromptTemplate.from_messages([
-    ("system", "If the provided query does not return enough relevant data, generate a better search query."),
+    ("system", "If the initial query fails to retrieve sufficient or relevant data from the user's notes, generate an alternative search query that emphasizes the key concepts and context. This should help in retrieving more targeted information."),
     ("human", "{input}"),
 ])
 
@@ -118,6 +117,6 @@ if __name__ == "__main__":
         print(Fore.YELLOW + "[INFO] Query işleniyor...")
         response = rag_chain.invoke({"input": query, "chat_history": chat_history})
         
-        print(Fore.CYAN + f"AI: {response.content}")
+        print(Fore.CYAN + f"AI:", Fore.MAGENTA + f"{response.content}")
         chat_history.append(HumanMessage(content=query))
         chat_history.append(AIMessage(content=response.content))
