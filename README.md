@@ -1,4 +1,4 @@
-# Obsidian_RAG_Chatbot
+# Obsidian_RAG_Agent
 
 This tool allows you to share information from your Obsidian notes with an LLM and later ask questions about them. It is designed to be used via the terminal. The primary LLM is currently Gemini, with Ollama support coming soon.
 
@@ -42,6 +42,7 @@ python obsidian_rag.py
 Add the following line to your `.bashrc` or `.zshrc` file and restart your terminal. Modify the path according to your cloned directory:
 
 ```sh
-alias obs_rag='python /home/uraninjo/langchain_notes/obsidian_rag.py'
+alias obs_rag='python /home/uraninjo/langchain_notes/Obsidian_RAG_Chatbot/obsidian_rag.py'
 ```
 
+![alt text](docs/image.png)
