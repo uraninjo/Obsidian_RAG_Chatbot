@@ -31,8 +31,7 @@ pip install -r requirements.txt
 AI Noter can be used in two ways:  
 
 #### **1. Gemini Support:**  
-Run the following command to utilize both the Gemini and an Ollama model:  
-If you do not specify `use_ollama`, Gemini will be used by default.
+Run the following command to utilize both the Gemini model:  
 
 ```sh
 python obsidian_rag.py
@@ -43,6 +42,6 @@ python obsidian_rag.py
 Add the following line to your `.bashrc` or `.zshrc` file and restart your terminal. Modify the path according to your cloned directory:
 
 ```sh
-alias obs_rag='python /home/uraninjo/langchain_notes'
+alias obs_rag='python /home/uraninjo/langchain_notes/obsidian_rag.py'
 ```
 
