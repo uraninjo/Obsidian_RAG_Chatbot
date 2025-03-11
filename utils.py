@@ -53,3 +53,37 @@ def get_retriever(store_name, db_dir, embeddings, search_type="mmr", search_kwar
         search_kwargs=search_kwargs,
     )
     return retriever
+
+def search_with_fallback(query, retriever, llm, query_expansion_prompt, debug=False):
+    if debug:
+        print(f"\n{Fore.YELLOW}[DEBUG] Gelen sorgu: {query}{Style.RESET_ALL}")
+
+    # 1️⃣ İlk arama denemesi
+    results = retriever.invoke(query)
+    if debug:
+        print(f"{Fore.YELLOW}[DEBUG] İlk sorgu sonucu: {len(results)} doküman bulundu.{Style.RESET_ALL}")
+
+    if len(results) > 2:  # Eğer yeterli bilgi bulduysa devam et
+        results_ = [doc.page_content for doc in results]
+        print(f"{Fore.YELLOW}[DEBUG] Dokümanlar: {results_}{Style.RESET_ALL}")
+        return results_
+
+    print("🔍 İlk sorgudan yeterli bilgi bulunamadı, sorgu genişletiliyor...")
+
+    # 2️⃣ Alternatif genişletilmiş sorgu oluştur
+    new_query = llm.invoke(query_expansion_prompt.format(input=query)).content
+    if debug:
+        print(f"{Fore.YELLOW}[DEBUG] Yeni oluşturulan sorgu: {new_query}{Style.RESET_ALL}")
+
+    # 3️⃣ Yeni sorgu ile tekrar arama yap
+    new_results = retriever.invoke(new_query)
+    if debug:
+        print(f"{Fore.YELLOW}[DEBUG] Yeni sorgu sonucu: {len(new_results)} doküman bulundu.{Style.RESET_ALL}")
+
+    if len(new_results) > 2:  # Eğer bu sefer sonuç bulursa devam et
+        return [doc.page_content for doc in new_results]
+
+    print("⚠️ Genişletilmiş sorgudan da yeterli bilgi bulunamadı. Alternatif çözüm aranıyor...")
+
+    # 4️⃣ Son çare: Kullanıcıya bilgi yok mesajı göster
+    return ["I couldn't find enough relevant information. Maybe try rephrasing your question?"]

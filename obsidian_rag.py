@@ -11,10 +11,13 @@ from langchain_community.vectorstores import Chroma
 from langchain_community.embeddings import SentenceTransformerEmbeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.docstore.document import Document
-from langchain.chains import create_history_aware_retriever, create_retrieval_chain
-from langchain.chains.combine_documents import create_stuff_documents_chain
-from utils import create_vector_store, get_retriever
+from langchain.chains import create_history_aware_retriever
+from utils import create_vector_store, get_retriever, search_with_fallback
 from langchain_core.runnables import RunnablePassthrough
+from colorama import Fore, Style, init
+
+# Terminal renklerini başlat
+init(autoreset=True)
 
 # Ortam değişkenlerini yükle
 load_dotenv()
@@ -39,7 +42,7 @@ if os.path.exists(pickle_path):
     with open(pickle_path, "rb") as f:
         vault_path = pkl.load(f)
 else:
-    vault_path = input("Enter your Obsidian vault path: ")
+    vault_path = input(Fore.YELLOW + "Enter your Obsidian vault path: ")
     with open(pickle_path, "wb") as f:
         pkl.dump(vault_path, f)
 
@@ -69,7 +72,7 @@ contextualize_q_prompt = ChatPromptTemplate.from_messages([
 ])
 
 # Retriever'ı oluştur
-retriever = get_retriever("chroma_db_with_metadata", db_dir, embedder, search_type="mmr", search_kwargs={"k": 15, "fetch_l":50, "lambda_mult": 0.5})
+retriever = get_retriever("chroma_db_with_metadata", db_dir, embedder, search_type="mmr", search_kwargs={"k": 10})
 
 history_aware_retriever = create_history_aware_retriever(llm, retriever, contextualize_q_prompt)
 
@@ -83,20 +86,23 @@ qa_system_prompt = (
 )
 
 # QA prompt
-qa_prompt = ChatPromptTemplate.from_messages(
-    [
-        ("system", qa_system_prompt),  # Sistem mesajı en başta olmalı
-        MessagesPlaceholder("context"),  # Obsidian verilerinin eklendiği yer
-        MessagesPlaceholder("chat_history"),  # Sohbet geçmişi
-        ("human", "{input}"),  # Kullanıcının sorusu
-    ]
-)
+qa_prompt = ChatPromptTemplate.from_messages([
+    ("system", qa_system_prompt),
+    MessagesPlaceholder("context"),
+    MessagesPlaceholder("chat_history"),
+    ("human", "{input}"),
+])
 
-# Sorgu işleme zincirini oluştur
-question_answer_chain = create_stuff_documents_chain(llm, qa_prompt)
+# Alternatif sorgu üretme promptu
+query_expansion_prompt = ChatPromptTemplate.from_messages([
+    ("system", "If the provided query does not return enough relevant data, generate a better search query."),
+    ("human", "{input}"),
+])
+
+# Güncellenmiş RAG zinciri
 rag_chain = (
     RunnablePassthrough.assign(
-        context=lambda x: [doc.page_content for doc in retriever.invoke(x["input"])]
+        context=lambda x: search_with_fallback(x["input"], retriever, llm, query_expansion_prompt, debug=True)
     )
     | qa_prompt
     | llm
@@ -105,10 +111,13 @@ rag_chain = (
 if __name__ == "__main__":
     chat_history = []
     while True:
-        query = input("You: ")
+        query = input(Fore.GREEN + "You: ")
         if query.lower() == "exit":
             break
+        
+        print(Fore.YELLOW + "[INFO] Query işleniyor...")
         response = rag_chain.invoke({"input": query, "chat_history": chat_history})
-        print(f"AI: {response.content}")
+        
+        print(Fore.CYAN + f"AI: {response.content}")
         chat_history.append(HumanMessage(content=query))
         chat_history.append(AIMessage(content=response.content))
